@@ -19,7 +19,7 @@ function Register() {
 
     try {
       
-      const docRef = doc(db, 'REQUESTS', email);
+      const docRef = doc(db, 'USERS', email);
 
       // Store user data in Firestore
       const userData = {

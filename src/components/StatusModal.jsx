@@ -12,7 +12,7 @@ const StatusModal = ({ isOpen, onClose }) => {
     setStatus(null);
 
     try {
-      const userDoc = await getDoc(doc(db, 'REQUESTS', email));
+      const userDoc = await getDoc(doc(db, 'USERS', email));
       if (userDoc.exists()) {
         setStatus(userDoc.data().status);
       } else {

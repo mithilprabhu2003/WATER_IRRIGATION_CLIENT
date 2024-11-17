@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { realDb } from '../config/firebase';
+import { realDb, db, auth } from '../config/firebase';
 import { ref, onValue } from 'firebase/database';
+import { collection, query, where, getDocs, doc, onSnapshot } from "firebase/firestore";
 
 function MiddleSidebar() {
+  const [userEmail, setUserEmail] = useState("");
+  const [userWaterFlow, setUserWaterFlow] = useState(0); // Correct state initialization
   const [data, setData] = useState({
-    flow2: 0,
     flowadmin: 0,
     tds: 0,
     temperature: 0,
@@ -18,17 +20,66 @@ function MiddleSidebar() {
       const newData = snapshot.val();
       if (newData) {
         setData({
-          flow2: newData.flow2 || 0,
           flowadmin: newData.flowadmin || 0,
           tds: newData.tds || 0,
           temperature: newData.temperature || 0,
-          turbidity: newData.turbudity || 0,
+          turbidity: newData.turbidity || 0,
         });
       }
     });
-    
+
+    // Fetch user data (email and more)
+    fetchUserData();
+
     return () => unsubscribe(); // Clean up the listener on unmount
   }, []);
+
+  // Fetch user data, including email
+  const fetchUserData = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        const colRef = collection(db, "USERS");
+        const pendingQuery = query(colRef, where("authId", "==", userId));
+
+        // Fetch the documents matching the query
+        const querySnapshot = await getDocs(pendingQuery);
+
+        // Check if any documents were found
+        if (!querySnapshot.empty) {
+          querySnapshot.forEach((doc) => {
+            const userData = doc.data();
+            setUserEmail(userData.email || "No Email");
+          });
+        } else {
+          console.error("No user data found!");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  // Real-time listener for the user's water flow data
+  const getUserWaterFlowListener = () => {
+    const docRef = doc(db, "USERS", userEmail); // Assuming the email is the document ID
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const userData = snapshot.data();
+        setUserWaterFlow(userData.usedWaterFlow || 0); // Update the state with the usedWaterFlow field
+      }
+    });
+
+    return unsubscribe; // Return unsubscribe function to clean up listener
+  };
+
+  // Set up the listener for the user's water flow after email is set
+  useEffect(() => {
+    if (userEmail) {
+      const unsubscribeWaterFlow = getUserWaterFlowListener();
+      return () => unsubscribeWaterFlow(); // Cleanup on component unmount or email change
+    }
+  }, [userEmail]); // Re-run if userEmail changes
 
   // Card component for displaying data
   const DataCard = ({ title, value }) => (
@@ -47,8 +98,8 @@ function MiddleSidebar() {
     <div className="flex flex-col col-span-3 items-center justify-center w-full h-[calc(100vh-100px)]">
       <div className="flex justify-center gap-20 w-full h-full">
         {/* Upper Row with flow2 and flowadmin */}
-        <DataCard title="Flow" value={data.flow2} />
-        <DataCard title="Flow Admin" value={data.flowadmin} />
+        <DataCard title="Flow" value={userWaterFlow} />
+        {/* <DataCard title="Flow Admin" value={data.flowadmin} /> */}
       </div>
       <div className="flex justify-center gap-20 mt-10 w-full h-full ">
         {/* Lower Row with tds, temperature, and turbidity */}

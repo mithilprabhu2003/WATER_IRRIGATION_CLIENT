@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './config/firebase';
 
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
@@ -43,7 +44,9 @@ const App = () => {
     },
   ]);
 
-  return <RouterProvider router={router} />;
+  return (
+      <RouterProvider router={router} />
+  )
 };
 
 export default App;
