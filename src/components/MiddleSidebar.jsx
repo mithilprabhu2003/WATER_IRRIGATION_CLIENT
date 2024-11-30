@@ -5,7 +5,8 @@ import { collection, query, where, getDocs, doc, onSnapshot } from "firebase/fir
 
 function MiddleSidebar() {
   const [userEmail, setUserEmail] = useState("");
-  const [userWaterFlow, setUserWaterFlow] = useState(0); // Correct state initialization
+  const [userWaterFlow, setUserWaterFlow] = useState(0);
+  const [userWaterFlowStart, setUserWaterFlowStart] = useState(0);
   const [data, setData] = useState({
     flowadmin: 0,
     tds: 0,
@@ -13,7 +14,34 @@ function MiddleSidebar() {
     turbidity: 0,
   });
 
+  const fetchUserEmail = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        const colRef = collection(db, "USERS");
+        const pendingQuery = query(colRef, where("authId", "==", userId));
+
+        // Fetch the documents matching the query
+        const querySnapshot = await getDocs(pendingQuery);
+
+        // Check if any documents were found
+        if (!querySnapshot.empty) {
+          querySnapshot.forEach((doc) => {
+            const userData = doc.data();
+            setUserEmail(userData.email || null);
+          });
+          // console.log(userServiceStarted)
+        } else {
+          console.error("No user data found!");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  }
+
   // Listener to continuously fetch the latest data from Firebase Realtime Database
+  
   useEffect(() => {
     const dataRef = ref(realDb, "water");
     const unsubscribe = onValue(dataRef, (snapshot) => {
@@ -28,37 +56,11 @@ function MiddleSidebar() {
       }
     });
 
-    // Fetch user data (email and more)
-    fetchUserData();
+    fetchUserEmail()
 
     return () => unsubscribe(); // Clean up the listener on unmount
   }, []);
-
-  // Fetch user data, including email
-  const fetchUserData = async () => {
-    try {
-      const userId = auth.currentUser?.uid;
-      if (userId) {
-        const colRef = collection(db, "USERS");
-        const pendingQuery = query(colRef, where("authId", "==", userId));
-
-        // Fetch the documents matching the query
-        const querySnapshot = await getDocs(pendingQuery);
-
-        // Check if any documents were found
-        if (!querySnapshot.empty) {
-          querySnapshot.forEach((doc) => {
-            const userData = doc.data();
-            setUserEmail(userData.email || "No Email");
-          });
-        } else {
-          console.error("No user data found!");
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
+  
 
   // Real-time listener for the user's water flow data
   const getUserWaterFlowListener = () => {
@@ -67,6 +69,7 @@ function MiddleSidebar() {
       if (snapshot.exists()) {
         const userData = snapshot.data();
         setUserWaterFlow(userData.usedWaterFlow || 0); // Update the state with the usedWaterFlow field
+        setUserWaterFlowStart(userData.flowStart || 0); // Update the state with the flowStart field
       }
     });
 
@@ -79,7 +82,7 @@ function MiddleSidebar() {
       const unsubscribeWaterFlow = getUserWaterFlowListener();
       return () => unsubscribeWaterFlow(); // Cleanup on component unmount or email change
     }
-  }, [userEmail]); // Re-run if userEmail changes
+  }, []); // Re-run if userEmail changes
 
   // Card component for displaying data
   const DataCard = ({ title, value }) => (
@@ -98,7 +101,7 @@ function MiddleSidebar() {
     <div className="flex flex-col col-span-3 items-center justify-center w-full h-[calc(100vh-100px)]">
       <div className="flex justify-center gap-20 w-full h-full">
         {/* Upper Row with flow2 and flowadmin */}
-        <DataCard title="Flow" value={userWaterFlow} />
+        <DataCard title="Flow" value={data.flowadmin - userWaterFlowStart} />
         {/* <DataCard title="Flow Admin" value={data.flowadmin} /> */}
       </div>
       <div className="flex justify-center gap-20 mt-10 w-full h-full ">

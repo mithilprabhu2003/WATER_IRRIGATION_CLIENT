@@ -14,10 +14,10 @@ import Email from "../assets/EmailS";
 import Users from "../assets/UsersS";
 import Start from "../assets/Starts";
 import { ref, onValue } from "firebase/database";
-import { useUser } from '../context/user';
 
 function Header() {
-  const {userName,userEmail} = useUser();
+  const [userEmail, setUserEmail] = useState(null);
+  const [userName, setUserName] = useState(null);
   const [userServiceStarted, setUserServiceStarted] = useState(false);
   const navigate = useNavigate();
 
@@ -56,6 +56,7 @@ function Header() {
         if (!querySnapshot.empty) {
           querySnapshot.forEach((doc) => {
             const userData = doc.data();
+            setUserEmail(userData.email || "No Email");
             setUserName(userData.name || "No Name");
             setUserServiceStarted(userData.isServiceStarted || false)
           });
@@ -70,6 +71,7 @@ function Header() {
   };
 
   useEffect(() => {
+    fetchUserData()
     const unsubscribe = getAdminWaterFlowListener();
 
     return () => {
@@ -112,7 +114,8 @@ function Header() {
 
                 await updateDoc(ref,{
                   isServiceStarted:false,
-                  flowStop:data.flowadmin
+                  flowStop:data.flowadmin,
+                  flowStart : 0
                 })
                 setUserServiceStarted(false)
                 console.log("Stopped");
@@ -139,21 +142,6 @@ function Header() {
               Start
             </button>
             }
-            {/* <button
-              onClick={async(e) => {
-                e.preventDefault();
-                const ref = doc(db,"USERS",userEmail)
-                await updateDoc(ref,{
-                  isServiceStarted:true,
-                  flowStart:data.flowadmin
-                })
-                console.log("started");
-              }}
-              className="p-16-semibold flex size-full gap-4 p-4 group font-semibold rounded-full bg-cover hover:bg-purple-100 hover:shadow-inner focus:bg-gradient-to-r from-purple-400 to-purple-600 focus:text-white text-gray-700 transition-all ease-linear"
-            >
-              <Start />
-              Start
-            </button> */}
           </li>
         </ul>
       </div>
